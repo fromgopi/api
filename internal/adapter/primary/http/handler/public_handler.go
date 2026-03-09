@@ -19,6 +19,7 @@ type PublicHandler struct {
 	saleService     *service.SaleService
 	userService     *service.UserService
 	authService     *service.AuthService
+	deliveryService *service.DeliveryService
 }
 
 func NewPublicHandler(
@@ -27,6 +28,7 @@ func NewPublicHandler(
 	saleService *service.SaleService,
 	userService *service.UserService,
 	authService *service.AuthService,
+	deliveryService *service.DeliveryService,
 ) *PublicHandler {
 	return &PublicHandler{
 		variantService:  variantService,
@@ -34,6 +36,7 @@ func NewPublicHandler(
 		saleService:     saleService,
 		userService:     userService,
 		authService:     authService,
+		deliveryService: deliveryService,
 	}
 }
 
@@ -391,4 +394,32 @@ func (h *PublicHandler) GetOrderTracking(c *gin.Context) {
 	}
 
 	response.OK(c, "Order details retrieved", sale)
+}
+
+// @Summary      Check serviceability
+// @Description  Check if a pincode is serviceable and get delivery details.
+// @Tags         Public
+// @Produce      json
+// @Param        pincode   query      string  true  "Pincode to check"
+// @Success      200       {object}  response.Response{data=entity.ServiceableArea}
+// @Router       /public/serviceability [get]
+func (h *PublicHandler) CheckServiceability(c *gin.Context) {
+	pincode := c.Query("pincode")
+	if pincode == "" {
+		response.BadRequest(c, "Pincode is required")
+		return
+	}
+
+	area, err := h.deliveryService.CheckServiceability(c.Request.Context(), pincode)
+	if err != nil {
+		response.InternalErrorDebug(c, "Failed to check serviceability", err)
+		return
+	}
+
+	if area == nil {
+		response.Success(c, 200, "Area not serviceable", gin.H{"serviceable": false})
+		return
+	}
+
+	response.OK(c, "Area is serviceable", area)
 }

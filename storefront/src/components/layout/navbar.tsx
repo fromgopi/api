@@ -1,13 +1,13 @@
-"use client";
-import { Search, ShoppingCart, User, MapPin, Menu, ChevronDown, Languages } from "lucide-react";
+import { Search, ShoppingCart, User, MapPin, Menu, ChevronDown, Languages, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/store/use-cart";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAuth } from "@/store/use-auth";
 import { useLocale, useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n/routing';
+import { useLocation } from "@/store/use-location";
 
 interface Category {
     id: number;
@@ -16,6 +16,7 @@ interface Category {
 
 export default function Navbar() {
     const t = useTranslations('Navbar');
+    const ts = useTranslations('Serviceability');
     const locale = useLocale();
     const router = useRouter();
     const pathname = usePathname();
@@ -23,12 +24,44 @@ export default function Navbar() {
     const items = useCart((state) => state.items);
     const cartCount = items.reduce((acc, item) => acc + item.quantity, 0);
     const { user, isAuthenticated, logout } = useAuth();
+    const { pincode, setLocation, isServiceable } = useLocation();
+
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isAccountOpen, setIsAccountOpen] = useState(false);
+    const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+    const [tempPincode, setTempPincode] = useState("");
+    const [isChecking, setIsChecking] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const toggleLocale = () => {
         const nextLocale = locale === 'en' ? 'hi' : 'en';
         router.replace(pathname, { locale: nextLocale });
+    };
+
+    const handlePincodeSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!tempPincode || tempPincode.length < 6) {
+            setError(ts('pincodeRequired'));
+            return;
+        }
+
+        setIsChecking(true);
+        setError(null);
+
+        try {
+            const response = await api.get(`/public/serviceability?pincode=${tempPincode}`);
+            if (response.data.data) {
+                setLocation(tempPincode, response.data.data);
+                setIsLocationModalOpen(false);
+            } else {
+                setError(ts('notServiceable'));
+                setLocation(tempPincode, null);
+            }
+        } catch (err) {
+            setError(ts('notServiceable'));
+        } finally {
+            setIsChecking(false);
+        }
     };
 
     const { data: categoriesResponse } = useQuery({
@@ -41,15 +74,30 @@ export default function Navbar() {
 
     const categories = categoriesResponse?.data || [];
 
+    useEffect(() => {
+        if (pincode) {
+            setTempPincode(pincode);
+        } else {
+            // Auto-prompt for location if not set
+            const timer = setTimeout(() => setIsLocationModalOpen(true), 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [pincode]);
+
     return (
         <header className="sticky top-0 z-50 w-full" onMouseLeave={() => setIsAccountOpen(false)}>
             {/* Top Strip - Location & Links */}
             <div className="bg-secondary text-secondary-foreground text-xs py-1.5 px-4 hidden md:block">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <button className="flex items-center gap-1 hover:text-primary transition-colors">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span>{t('deliverTo')} Mumbai 400001</span>
+                        <button
+                            onClick={() => setIsLocationModalOpen(true)}
+                            className="flex items-center gap-1 hover:text-primary transition-colors group"
+                        >
+                            <MapPin className={cn("w-3.5 h-3.5", isServiceable ? "text-primary" : "text-muted-foreground")} />
+                            <span className="group-hover:underline">
+                                {pincode ? `${ts('deliverTo')} ${pincode}` : ts('enterPincode')}
+                            </span>
                         </button>
                     </div>
                     <div className="flex items-center gap-6">
@@ -66,6 +114,67 @@ export default function Navbar() {
                     </div>
                 </div>
             </div>
+
+            {/* Location Modal */}
+            {isLocationModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-bold text-secondary flex items-center gap-2">
+                                    <MapPin className="w-5 h-5 text-primary" />
+                                    {ts('enterPincode')}
+                                </h3>
+                                <button
+                                    onClick={() => setIsLocationModalOpen(false)}
+                                    className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-slate-400" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handlePincodeSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={tempPincode}
+                                            onChange={(e) => setTempPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                            placeholder="e.g. 110001"
+                                            className={cn(
+                                                "w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-secondary font-medium transition-all outline-none",
+                                                error ? "border-red-100 focus:border-red-500" : "border-transparent focus:border-primary"
+                                            )}
+                                        />
+                                        {isChecking && (
+                                            <Loader2 className="absolute right-4 top-3.5 w-5 h-5 animate-spin text-primary" />
+                                        )}
+                                    </div>
+                                    {error ? (
+                                        <p className="text-[10px] text-red-500 font-medium flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3" />
+                                            {error}
+                                        </p>
+                                    ) : isServiceable && pincode === tempPincode ? (
+                                        <p className="text-[10px] text-green-600 font-medium flex items-center gap-1">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            {ts('serviceable')}
+                                        </p>
+                                    ) : null}
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isChecking || tempPincode.length < 6}
+                                    className="w-full bg-primary text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/25 hover:bg-primary/95 transition-all disabled:opacity-50 disabled:shadow-none"
+                                >
+                                    {ts('apply')}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Navbar */}
             <nav className="bg-secondary border-b border-white/10 px-4 py-3">
@@ -190,7 +299,7 @@ export default function Navbar() {
             </nav>
 
             {/* Sub-navbar (Categories) */}
-            <div className="bg-secondary/95 backdrop-blur-md border-b border-white/5 px-4 py-1.5 overflow-x-auto no-scrollbar hidden md:block">
+            <div className="bg-secondary/95 border-b border-white/5 px-4 py-1.5 overflow-x-auto no-scrollbar hidden md:block">
                 <div className="max-w-7xl mx-auto flex items-center gap-6 text-xs font-medium text-white/90 whitespace-nowrap">
                     <button className="flex items-center gap-1.5 hover:text-primary transition-colors font-bold">
                         <Menu className="w-4 h-4" />

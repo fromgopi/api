@@ -2,11 +2,13 @@
 
 import React from "react";
 import { Link } from "@/i18n/routing";
-import { Plus, ShoppingCart } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Plus, ShoppingCart, AlertCircle } from "lucide-react";
 import { PublicProduct } from "@/types/storefront";
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/store/use-cart";
 import { useTranslations } from "next-intl";
+import { useLocation } from "@/store/use-location";
 
 interface ProductCardProps {
     product: PublicProduct;
@@ -14,12 +16,16 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
     const t = useTranslations('Product');
+    const ts = useTranslations('Serviceability');
     const addItem = useCart((state) => state.addItem);
+    const { isServiceable, pincode } = useLocation();
 
     const price = parseFloat(product.selling_price);
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
+        if (pincode && !isServiceable) return;
+
         addItem({
             id: product.id,
             name: product.name,
@@ -29,6 +35,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             image: product.image,
         });
     };
+
+    const isButtonDisabled = !!pincode && !isServiceable;
 
     return (
         <Link href={`/product/${product.id}`} className="bg-white rounded-lg border border-accent p-3 md:p-4 hover:shadow-xl transition-all duration-300 group flex flex-col h-full">
@@ -74,10 +82,25 @@ export default function ProductCard({ product }: ProductCardProps) {
 
                     <button
                         onClick={handleAddToCart}
-                        className="w-full bg-primary hover:bg-primary/90 text-white py-2 rounded-md font-bold flex items-center justify-center gap-2 transition-colors"
+                        disabled={isButtonDisabled}
+                        className={cn(
+                            "w-full py-2 rounded-md font-bold flex items-center justify-center gap-2 transition-all",
+                            isButtonDisabled
+                                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                : "bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/10"
+                        )}
                     >
-                        <Plus className="w-4 h-4" />
-                        {t('addToCart')}
+                        {isButtonDisabled ? (
+                            <>
+                                <AlertCircle className="w-4 h-4" />
+                                {ts('notServiceable')}
+                            </>
+                        ) : (
+                            <>
+                                <Plus className="w-4 h-4" />
+                                {t('addToCart')}
+                            </>
+                        )}
                     </button>
                 </div>
             </div>

@@ -64,6 +64,7 @@ func SetupRoutes(r *gin.Engine, cfg *Config) {
 			public.POST("/orders", cfg.PublicHandler.CreateOrder)
 			public.POST("/register", cfg.PublicHandler.Register)
 			public.POST("/login", cfg.PublicHandler.Login)
+			public.GET("/serviceability", cfg.PublicHandler.CheckServiceability)
 
 			// Authenticated customer endpoints
 			me := public.Group("/my", cfg.AuthMiddleware.Authenticate())
