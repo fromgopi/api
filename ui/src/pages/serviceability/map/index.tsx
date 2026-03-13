@@ -39,7 +39,7 @@ function MapResizer({ center, zoom }: { center: [number, number], zoom: number }
 export default function ServiceabilityMapPage() {
     const [geoData, setGeoData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchPincode, setSearchPincode] = useState("");
+    const [searchPincode, setSearchPincode] = useState("520010");
     const [searchResult, setSearchResult] = useState<ServiceableAreaResponse | null>(null);
     const [searching, setSearching] = useState(false);
     const [mapCenter, setMapCenter] = useState<[number, number]>([28.6139, 77.2090]);
@@ -50,6 +50,11 @@ export default function ServiceabilityMapPage() {
             try {
                 const res = await serviceabilityApi.listGeoData();
                 setGeoData(res.data.data || []);
+                
+                // Automatically search for default pincode after map data is ready
+                if (searchPincode) {
+                    performSearch(searchPincode);
+                }
             } catch {
                 toast.error("Failed to load map data");
             } finally {
@@ -59,21 +64,18 @@ export default function ServiceabilityMapPage() {
         load();
     }, []);
 
-    const handleSearch = async () => {
-        if (!searchPincode.trim()) return;
+    const performSearch = async (pincode: string) => {
+        if (!pincode.trim()) return;
         setSearching(true);
-        setSearchResult(null);
         try {
-            const res = await serviceabilityApi.checkServiceability(searchPincode);
+            const res = await serviceabilityApi.checkServiceability(pincode);
             if (res.data.success && res.data.data) {
                 const area = res.data.data;
                 setSearchResult(area);
                 
-                // If we have geo_data (center), pan there
                 if (area.geo_data && area.geo_data.center) {
                     try {
                         let centerData = area.geo_data.center;
-                        // Defensive check: only parse if it looks like JSON
                         if (centerData.startsWith('{') || centerData.startsWith('[')) {
                             const center = JSON.parse(centerData);
                             if (center.type === "Point") {
@@ -81,23 +83,27 @@ export default function ServiceabilityMapPage() {
                                 setMapCenter([lat, lng]);
                                 setMapZoom(13);
                             }
-                        } else {
-                            console.warn("Center coordinates are not in GeoJSON format:", centerData);
                         }
                     } catch (e) {
                         console.error("Failed to parse center coordinates", e);
                     }
                 }
-                toast.success(`Pincode ${searchPincode} is serviceable in ${area.zone_name}`);
-            } else {
-                toast.error(`Pincode ${searchPincode} is not serviceable`);
+                if (pincode !== "520010") {
+                    toast.success(`Pincode ${pincode} is serviceable in ${area.zone_name}`);
+                }
+            } else if (pincode !== "520010") {
+                toast.error(`Pincode ${pincode} is not serviceable`);
             }
         } catch {
-            toast.error("Error checking serviceability");
+            if (pincode !== "520010") {
+                toast.error("Error checking serviceability");
+            }
         } finally {
             setSearching(false);
         }
     };
+
+    const handleSearch = () => performSearch(searchPincode);
 
     // Convert our backend model to GeoJSON FeatureCollection for Leaflet
     const featureCollection = {
