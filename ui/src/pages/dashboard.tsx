@@ -285,7 +285,7 @@ export default function DashboardPage() {
             // Only trigger if no modifier keys are pressed (to avoid breaking browser default shortcuts)
             if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-            switch(e.key.toLowerCase()) {
+            switch (e.key.toLowerCase()) {
                 case 'a':
                     e.preventDefault();
                     navigate("/inventory");
@@ -412,9 +412,9 @@ export default function DashboardPage() {
                     <div className="h-px flex-1 bg-indigo-100 dark:bg-slate-800 ml-4" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <QuickAction 
-                        icon={BoxesIcon} 
-                        label="Adjust Stock" 
+                    <QuickAction
+                        icon={BoxesIcon}
+                        label="Adjust Stock"
                         description="Update quantities"
                         color="bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100"
                         onClick={() => navigate("/inventory")}
@@ -422,9 +422,9 @@ export default function DashboardPage() {
                         badge={stats.lowStockItems > 0 ? `${stats.lowStockItems} Low` : undefined}
                         badgeColor="bg-amber-100 text-amber-700 border-amber-200"
                     />
-                    <QuickAction 
-                        icon={Truck} 
-                        label="New PO" 
+                    <QuickAction
+                        icon={Truck}
+                        label="New PO"
                         description="Order supplies"
                         color="bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
                         onClick={() => navigate("/procurements")}
@@ -432,28 +432,28 @@ export default function DashboardPage() {
                         badge={stats.overduePOs > 0 ? `${stats.overduePOs} Overdue` : undefined}
                         badgeColor="bg-rose-100 text-rose-700 border-rose-200"
                     />
-                    <QuickAction 
-                        icon={MapPin} 
-                        label="Map/Zone" 
+                    <QuickAction
+                        icon={MapPin}
+                        label="Map/Zone"
                         description="Serviceability"
                         color="bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100"
                         onClick={() => navigate("/serviceability/map")}
                         hotkey="M"
                     />
-                    <QuickAction 
-                        icon={Plus} 
-                        label="Add Product" 
+                    <QuickAction
+                        icon={Plus}
+                        label="Add Product"
                         description="Create variant"
                         color="bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100"
                         onClick={() => navigate("/products")}
                         hotkey="P"
                     />
-                    <QuickAction 
-                        icon={IndianRupee} 
-                        label="Record Sale" 
+                    <QuickAction
+                        icon={IndianRupee}
+                        label="Record Sale"
                         description="Manual transaction"
                         color="bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
-                        onClick={() => navigate("/sales")}
+                        onClick={() => navigate("/pos")}
                         hotkey="S"
                     />
                 </div>
@@ -858,19 +858,19 @@ function MiniStat({ icon: Icon, label, value, color }: { icon: React.ElementType
     );
 }
 
-function QuickAction({ 
-    icon: Icon, label, description, color, onClick, hotkey, badge, badgeColor 
-}: { 
+function QuickAction({
+    icon: Icon, label, description, color, onClick, hotkey, badge, badgeColor
+}: {
     icon: React.ElementType; label: string; description: string; color: string; onClick: () => void;
     hotkey?: string; badge?: string; badgeColor?: string;
 }) {
     return (
-        <button 
+        <button
             onClick={onClick}
             className={`flex flex-col items-center justify-center p-4 rounded-[20px] border transition-all hover:scale-105 active:scale-95 group relative overflow-hidden ${color} h-28`}
         >
             <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
-            
+
             {/* Hotkey Hint */}
             {hotkey && (
                 <div className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100 transition-opacity bg-white/20 px-1.5 py-0.5 rounded border border-white/10">
